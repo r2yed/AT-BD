@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- BUILD: atty-v4-glitter-live -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Countdown</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -55,7 +56,8 @@ body{
 @keyframes float1{50%{transform:translate(120px,90px) scale(1.15)}}
 @keyframes float2{50%{transform:translate(-100px,-70px) scale(1.1)}}
 
-.wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+canvas#fall{position:fixed;inset:0;pointer-events:none;z-index:0}
 
 /* ---------- HERO ---------- */
 header{padding:66px 0 30px;text-align:center;position:relative}
@@ -90,11 +92,13 @@ h1{
   background:linear-gradient(90deg,transparent,rgba(255,215,110,.75),transparent)}
 .unit .num{
   font-size:clamp(2.2rem,7.5vw,4.3rem);font-weight:800;line-height:1;
+  filter:drop-shadow(0 0 14px rgba(255,215,110,.32));animation:twinkle 3.4s ease-in-out infinite;
   font-variant-numeric:tabular-nums;letter-spacing:-.04em;
   background:linear-gradient(180deg,#fff,#ffd9a8);-webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .unit .lbl{margin-top:10px;font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .unit.tick .num{animation:bump .45s cubic-bezier(.34,1.56,.64,1)}
+@keyframes twinkle{50%{filter:drop-shadow(0 0 24px rgba(255,215,110,.62))}}
 @keyframes bump{0%{transform:translateY(-9px) scale(1.07);opacity:.35}100%{transform:none}}
 
 .progress{max-width:820px;margin:22px auto 0}
@@ -120,9 +124,18 @@ nav{display:flex;justify-content:center;gap:8px;margin:52px 0 30px;flex-wrap:wra
 @keyframes rise{from{opacity:0;transform:translateY(18px)}}
 
 .card{
-  background:var(--card);border:1px solid var(--faint);border-radius:var(--radius);
+  background:rgba(24,12,36,.52);border:1px solid var(--faint);border-radius:var(--radius);
   padding:clamp(22px,4vw,38px);backdrop-filter:blur(14px);box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
 }
+.card::after,.unit::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(115deg,transparent 34%,rgba(255,255,255,.07) 46%,
+             rgba(255,215,110,.13) 51%,rgba(255,255,255,.06) 56%,transparent 68%);
+  background-size:280% 100%;animation:sheen 9s linear infinite;
+}
+.unit::after{animation-duration:6s}
+@keyframes sheen{0%{background-position:280% 0}100%{background-position:-80% 0}}
 .card + .card{margin-top:18px}
 h2{font-size:clamp(1.5rem,4vw,2.1rem);font-weight:800;letter-spacing:-.03em;margin-bottom:8px}
 .lede{color:var(--muted);font-weight:300;margin-bottom:26px;max-width:62ch;line-height:1.6}
@@ -250,14 +263,15 @@ canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:98}
 <body>
 
 <div class="bg"></div><div class="glow a"></div><div class="glow b"></div>
+<canvas id="fall"></canvas>
 <canvas id="confetti"></canvas>
 
 <div class="wrap">
 
   <header>
     <span class="eyebrow"><span class="dot"></span><span id="eyebrowText">The big 5–0 is coming</span></span>
-    <h1 id="heroName">LAYLA</h1>
-    <p class="subtitle" id="heroSub">is turning <b>32</b> on <b>September 27</b> — and we're not letting it go quietly.</p>
+    <h1 id="heroName">ATTY</h1>
+    <p class="subtitle" id="heroSub">is turning <b>50</b> on <b>November 4</b> — and fifty has never looked less tired.</p>
 
     <div class="countdown" id="clock">
       <div class="unit"><div class="num" id="d">--</div><div class="lbl">Days</div></div>
@@ -619,6 +633,53 @@ function burst(n){
     c:COLORS[i%COLORS.length], r:Math.random()*6, vr:(Math.random()-.5)*.32, life:1
   });
 }
+/* ---------- never-ending confetti + glitter (behind the cards) ---------- */
+const fc=$("#fall"), fx=fc.getContext("2d");
+const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let flakes=[], sparks=[];
+function fsize(){ fc.width=innerWidth; fc.height=innerHeight }
+fsize(); addEventListener("resize",()=>{fsize();seed()});
+function mkFlake(top){
+  return { x:Math.random()*innerWidth,
+           y: top ? -20-Math.random()*120 : Math.random()*innerHeight,
+           vy:.45+Math.random()*1.25, vx:(Math.random()-.5)*.5,
+           w:4+Math.random()*6, h:6+Math.random()*9,
+           c:COLORS[(Math.random()*COLORS.length)|0],
+           r:Math.random()*6, vr:(Math.random()-.5)*.06,
+           a:.22+Math.random()*.42, sway:Math.random()*6.28 };
+}
+function mkSpark(){
+  return { x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+           s:.5+Math.random()*1.9, p:Math.random()*6.28, sp:.015+Math.random()*.045,
+           c: Math.random()<.55 ? "#ffd76e" : (Math.random()<.5 ? "#fff8f2" : "#8b5cf6") };
+}
+function seed(){
+  const nF = REDUCE ? 0 : Math.round(innerWidth/26);
+  const nS = REDUCE ? 0 : Math.round(innerWidth/30);
+  flakes = Array.from({length:nF}, ()=>mkFlake(false));
+  sparks = Array.from({length:nS}, mkSpark);
+}
+seed();
+function fallLoop(){
+  fx.clearRect(0,0,fc.width,fc.height);
+  for(const f of flakes){
+    f.sway+=.021; f.y+=f.vy; f.x+=f.vx+Math.sin(f.sway)*.65; f.r+=f.vr;
+    if(f.y>innerHeight+24) Object.assign(f, mkFlake(true));
+    if(f.x<-30) f.x=innerWidth+30; else if(f.x>innerWidth+30) f.x=-30;
+    fx.save(); fx.globalAlpha=f.a; fx.translate(f.x,f.y); fx.rotate(f.r);
+    fx.fillStyle=f.c; fx.fillRect(-f.w/2,-f.h/2,f.w,f.h); fx.restore();
+  }
+  for(const s of sparks){
+    s.p+=s.sp; const t=(Math.sin(s.p)+1)/2;
+    if(t<.02 && Math.random()<.04) Object.assign(s, mkSpark());
+    fx.save(); fx.globalAlpha=t*.85; fx.fillStyle=s.c;
+    if(s.s>1.15){ fx.shadowBlur=10; fx.shadowColor=s.c; }
+    fx.beginPath(); fx.arc(s.x, s.y, s.s*t+.35, 0, 6.3); fx.fill(); fx.restore();
+  }
+  requestAnimationFrame(fallLoop);
+}
+if(!REDUCE) fallLoop();
+
 function loop(){
   ctx.clearRect(0,0,cv.width,cv.height);
   bits=bits.filter(b=>b.life>0);
